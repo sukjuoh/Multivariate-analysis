@@ -3,7 +3,7 @@ title: "Canonical Correlation Analysis"
 author: "2020111538 Oh SukJu"
 date: 
 output:
-  pdf_document:
+  github_document:
     latex_engine: xelatex
     keep_tex: false
     toc: true            # 목차 추가
