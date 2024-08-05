@@ -1,0 +1,453 @@
+---
+title: "Correspondence Analysis, Cluster Analysis, Discreminant Analysis"
+author: "Oh SukJu"
+date: 
+output:
+  pdf_document:
+    latex_engine: xelatex
+    keep_tex: false
+    toc: true            # 목차 추가
+    toc_depth: 3         # 목차의 깊이 지정
+    number_sections: true  # 섹션 번호 지정
+    fig_caption: true    # 그림 캡션 추가
+    fig_width: 6         # 그림 너비
+    fig_height: 4        # 그림 높이
+    includes:
+      in_header:
+  output: 
+---
+
+
+##Correspondence Analysis
+```{r}
+library(ca)
+brand = read.csv("/Users/ohsukju/Downloads/data3/brand.csv", header=T)
+head(brand)
+```
+```{r}
+brand.tb1 = xtabs(count~age+brand, data=brand)
+brand.tb1
+brand.ca = ca(brand.tb1)
+brand.ca
+plot(brand.ca, map="symmetric")
+```
+
+##Cluster Analysis
+
+```{r}
+d1 = read.csv("/Users/ohsukju/Downloads/data3/protein.csv", header=T)
+d1.dist = dist(scale(d1[,-1]))
+d1.hi=hclust(d1.dist, method='ward.D2')
+plot(d1.hi)
+rect.hclust(d1.hi,k=5, border='red')
+```
+
+```{r}
+class(d1.hi)
+d1.hi
+
+d2 = data.frame(country=d1$country, d1[,-1], cluster=cutree(d1.hi, k=5))
+#data.frame((country=d1$country, scale(d1[,-1]), cluster=cutree(d1.hi, k=5))
+
+d2
+
+table(d2$cluster)
+#aggregate(scale(d1[,-1]), list(d2$cluster), mean)
+d3=aggregate(.~cluster,d2[,-1],mean)
+d3
+```
+
+```{r}
+colcol=c('white', 'yellow', 'green', 'blue', 'black')
+kkk=5
+vv=names(d3)[-1]
+tmp = barplot(as.numeric((as.matrix(d3[,-1]))), col=colcol[1:kkk])
+text(matrix(tmp,kkk)[1,],rep(-2,length(vv)), vv,xpd=T, cex=.5)
+text(tmp, rep(-4,length(tmp)),rep(c('',2:kkk), length(vv)), xpd=T, cex=.5)
+
+```
+
+```{r}
+rev(d1.hi)
+
+```
+```{r}
+set.seed(4)
+d1.k=kmeans(scale(d1[,-1]), centers=5)
+d4=data.frame(d1.cluster=d1.k$cluster)
+d4
+```
+```{r}
+library(cluster)
+par(mfcol=c(1,2))
+clusplot(scale(d1[,-1]), d1.k$cluster)
+tmp=princomp(scale(d1[,-1]))
+
+pp=data.frame(tmp$scores)
+plot(pp[,1],pp[,2], type="n")
+
+
+text(pp[,1], pp[,2], d1.k$cluster)
+
+```
+
+```{r fig.width=7}
+par(mfcol=c(1,2))
+d1.p=pam(scale(d1[,-1]),5)
+plot(d1.p)
+
+```
+
+```{r}
+library(factoextra)
+
+fviz_nbclust(scale(d1[,-1]), kmeans)
+```
+
+```{r}
+#install.packages("NbClust")
+library(NbClust)
+NbClust(scale(d1[,-1]), method='kmeans')
+```
+
+```{r}
+library(mclust)
+d6=mclustBIC(scale(d1[,-1]))
+d6
+```
+```{r}
+plot(d6)
+```
+
+
+## 판별분석(Discriminant analysis)
+
+1. 알려진 군집에 따른 다변량 자료행렬 준비
+
+2. 각 군집 별 자료의 다변량 정규성 확인
+
+3. 각 군집의 공분산행렬의 동질성 확인
+
+4. 2와 3단계의 결과에 따라
+
+-  선형판별분석(Linear discriminant analysis, LDA): 정규성 및 공분산의 동질성 모두 성립시
+
+-  이차판별분석(Quadratic discriminant analysis, LDA): 정규성만 성립시
+
+-  피셔선형판별분석: 공분산의 동질성만 성립시
+
+5. 오분류율을 계산하여 판별함수의 타당성 확인
+
+6. 임의의 개체를 적합된 판별함수로 적절한 군집으로 분류
+
+
+
+### 두 군집의 판별분석
+
+1. $x$는 두 군집 $C_1, C_2$에서 관측 가정.
+
+-  $f_1 ( x)$: 군집 $C_1$에서의 확률함수
+
+-  $f_2 ( x)$: 군집 $C_2$에서의 확률함수
+
+2. 오분류 평균비용(Expected cost of misclassification, ECM)
+
+-  event A: 임의 개체의 실제 군집이 $C_1$
+
+-  event B: 임의 개체의 군집을 $C_1$이라 판별. 
+
+$$
+
+\begin{aligned}
+
+B&=\left\{ x \Big | \frac{f_1( x)}{f_2( x)}>k \right\}\\
+
+P(A)&=p_1,~~~P(A^c)=p_2=1-p_1\\ P(군집~~C_1으로~~오분류)&=P(A^c\cap B)=P(A^c)P(B|A^c)=p_2\int_{B} f_2( x)\\ P(군집~~C_2로~~오분류)&=P(A\cap B^c)=P(A)P(B^c|A)=p_1\int_{B^c} f_1( x)\\ \end{aligned} 
+
+$$
+
+-  오분류 비용: $C_j$군집을 $C_i$군집이라 오분류시 비용. $c(i|j), i\ne j$
+
+$$
+
+\begin{aligned} ECM&=c(1|2)P(군집~~C_1으로~~오분류)+c(2|1)P(군집~~C_2로~~오분류)\\ &=c(1|2)p_2\int_{B} f_2( x)+c(2|1)p_1\int_{B^c} f_1( x)\\ &=c(1|2)p_2\int_{B} f_2( x)+c(2|1)p_1\left(1-\int_{B} f_1( x)\right)\\ &
+
+$$
+
+-  $k=\frac{c(1|2)p_2}{c(2|1)p_1}$일 때 $c(2|1)p_1+\Big [ c(1|2)p_2-kc(2|1)p_1 \Big]\int_{B} f_2( x)=c(2|1)p_1$
+
+3. ECM 분류규칙
+
+$$
+
+\frac{f_1( x)}{f_2( x)}> \frac{c(1|2)p_2}{c(2|1)p_1}~~~\Leftrightarrow~~~군집~~C_1으로~~판별 
+
+$$
+
+4. 총오분류확률(Total probability of misclassification, TPM)
+
+$$
+
+TPM=P(군집~~C_1으로~~오분류)+P(군집~~C_2로~~오분류)=p_2\int_{B} f_2( x)+p_1\int_{B^c} f_1( x) 
+
+$$
+
+5. TPM 분류규칙
+
+$$
+
+\frac{f_1( x)}{f_2( x)}> \frac{p_2}{p_1}~~~\Leftrightarrow~~~군집~~C_1으로~~판별 
+
+$$
+
+
+
+
+
+### 다변량 정규성을 따르는 두 집단의 판별분석
+
+$$
+
+f_k( x)=\left(\frac 1{\sqrt{2\pi}}\right)^{p}\left| \Sigma_k\right|^{-1/2}\exp\left[-\frac 1 2 ( x-\mathbf\mu_k)'\mathbf\Sigma_k^{-1}( x-\mathbf\mu_k)\right],~~~~~k=1,2 
+
+$$
+
+
+
+1. 군집 $C_1$의 $p$차원의 확률벡터 $x$의 확률함수는 $f_1( x)$이고 $n_1$개의 표본 추출 
+
+
+
+2. 군집 $C_2$의 $p$차원의 확률벡터 $x$의 확률함수는 $f_2( x)$이고 $n_2$개의 표본 추출 
+
+
+
+3. 공분산행렬의 동질성 
+
+
+
+- $x_{kij}$: 군집 $C_k$에서 $i$번째 표본의 $j$번째 확률변수. $k=1,2,\ldots,g~~~i=1,2,\ldots,n_k,~~~j=1,2,\ldots,p$
+
+- $H_0: \Sigma_1= \Sigma_2=\cdots= \Sigma_g$
+
+- 우도비검정(likelihood ratio test) 
+
+$$
+
+\begin{aligned} \Lambda&=\prod_{k=1}^g\left(\frac{| S_k|}{| S_p|}\right)^{(n_k-1)/2}=\prod_{k=1}^g| S_k^{-1} S_p|^{-(n_k-1)/2}\\ \\ S_k&=\frac 1 {n_k-1} {Y'_k Y_k},~~~Y=\{y_{kij}\}_{ij},~~~y_{kij}=x_{kij}-\mu_j\\ S_p&=\frac 1{\sum_{k=1}^g(n_k-1)} \sum_{k=1}^g(n_k-1) S_k\\ \\\\ -2\log\Lambda&\approx \chi_{df}^2,~~~ df= (\#parameter) - (\#parameter ~~under ~~H_0) = p(p+1)(g-1)/2 \end{aligned} 
+
+$$
+
+- Box's M-test: $n_k>20,~~p\le5,~~g\le5$
+
+$$
+
+\begin{aligned} -2\gamma\log\Lambda&\approx \chi_{df}^2,~~~~\gamma=1-\left[\sum_{k=1}^g\frac 1 {n_k-1}- \frac 1 {\sum_{k=1}^g(n_k-1)}\right]\left[\frac{2p^2+3p-1}{6(p+1)(g-1)}\right] \end{aligned} 
+
+$$
+
+
+
+4. 공분산행렬의 동질성 확인 시: $-2\gamma\log\Lambda\le\chi_{\alpha}(df)$
+
+-  ECM 분류규칙: $x_0$인 대상은 군집 $C_1$에 속한 것으로 판별하는 선형분류규칙.
+
+$$\begin{aligned}
+
+&\frac 12\left[(x_0-\mu_2)'\Sigma^{-1}(x_0-\mu_2)-(x_0-\mu_1)'\Sigma^{-1}(x_0-\mu_1)\right]\\
+
+&=\frac 12\left[(\mu_1-\mu_2)'\Sigma^{-1}x_0-(x_0-\mu_2)'\Sigma^{-1}\mu_2+(x_0-\mu_1)'\Sigma^{-1}\mu_1\right]\\
+
+&=\frac 12\left[(\mu_1-\mu_2)'\Sigma^{-1}x_0-x_0'\Sigma^{-1}(\mu_2-\mu_1)+\mu_2'\Sigma^{-1}\mu_2-\mu_1'\Sigma^{-1}\mu_1\right]\\
+
+&=(\mu_1-\mu_2)'\Sigma^{-1}x_0+\frac 12\left(\mu_2'\Sigma^{-1}\mu_2-\mu_1'\Sigma^{-1}\mu_1\right)\\
+
+&=(\mu_1-\mu_2)'\Sigma^{-1}x_0+\frac 12(\mu_2-\mu_1)'\Sigma^{-1}(\mu_2+\mu_1)
+
+\end{aligned}$$
+
+
+
+$$
+
+\begin{aligned} &\frac{f_1( x_0)}{f_2( x_0)}> \frac{c(1|2)p_2}{c(2|1)p_1}\\ &\Leftrightarrow~( \mu_1- \mu_2)' \Sigma^{-1} x_0-\frac 1 2 ( \mu_1- \mu_2)' \Sigma^{-1}( \mu_1+ \mu_2)> \log\left[ \frac{c(1|2)p_2}{c(2|1)p_1}\right]\\ &\Leftrightarrow~L( x_0)-\beta_0> \log\left[ \frac{c(1|2)p_2}{c(2|1)p_1}\right]\\\\ & \hat L( x_0)= (\hat{ \mu}_1-\hat{ \mu}_2)'\hat{ \Sigma}^{-1} x_0= (\bar{ x}_{k=1}-\bar{ x}_{k=2})'{ S}_p^{-1} x_0\\ & \hat{\beta}_0=\frac 1 2 (\hat{ \mu}_1-\hat{ \mu}_2)'\hat{ \Sigma}^{-1}(\hat{ \mu}_1+\hat{ \mu}_2)=\frac 1 2 (\bar{ x}_{k=1}-\bar{ x}_{k=2})'{ S}_p^{-1}(\bar{ x}_{k=1}+\bar{ x}_{k=2})\\\\ &\Leftrightarrow~\hat L( x_0)-\hat\beta_0> \log\left[ \frac{c(1|2)p_2}{c(2|1)p_1}\right] \end{aligned} 
+
+$$
+
+
+
+-  $\hat L( x_0)$는 $x_0=[x_{01}, x_{02},\ldots,x_{0p}]$의 선형 결합.  
+
+
+
+5. 공분산행렬의 이질성 확인 시: $-2\gamma\log\Lambda>\chi_{\alpha}(df)$. 이차분류규칙 
+
+  
+
+### 여러 군집의 판별분석
+
+1. $g>2$
+
+2. 군집 $C_l$을 $C_k$로 오분류할 확률과 손실비용을 각각 $P(k|l), c(k|l)$인 경우
+
+$$
+
+\begin{aligned} ECM_l&=\sum_{k=1,k\ne l}^g P(k|l)c(k|l),~~~~l=1,2,\ldots,g \end{aligned} 
+
+$$
+
+3. Total ECM: 표본이 군집 $C_k$에서 뽑힐 확률 $p_k$
+
+$$
+
+\begin{aligned} TECM&=\sum_{l=1}^g p_l ECM_l=\sum_{l=1}^g p_l \sum_{k=1,k\ne l}^g P(k|l)c(k|l),~~~~l=1,2,\ldots,g \end{aligned} 
+
+$$
+
+4. TECM 분류규칙
+
+-  $D_k( x_0)$가 최소값을 갖는 $k$확인
+
+$$
+
+D_k( x_0)=\sum_{l=1, l\ne k}^g p_l f_l( x_0) c(k|l),~~~k=1,2,\ldots,g 
+
+$$
+
+-  $x_0$는 군집 $C_k$소속으로 판별
+
+
+
+
+
+```{r}
+
+finance=read.csv("finance.csv",header=TRUE)
+
+head(finance)
+
+dim(finance)
+
+```
+
+
+
+- 선형판별분석
+
+```{r}
+
+library(MASS)
+
+finance.lda <- lda(y~x1+x2+x3+x4,data=finance)
+
+print(finance.lda)
+
+```
+
+- 선형판별점수: http://www.databaser.net/moniwiki/wiki.php/%ED%8C%90%EB%B3%84%EB%B6%84%EC%84%9D
+
+```{r}
+
+pred1 <- predict(finance.lda,finance)
+
+
+
+library(biotools)
+
+finance.boxM <- boxM(finance[,2:5],finance$y)
+
+
+
+tmp=finance.lda$means
+
+# tmp4=with(finance,x1*1.0023665+x2*3.9998578+x3*0.8450508-x4*1.0153181)
+
+tmp4=as.matrix(finance[,2:5])%*%matrix(finance.lda[[4]],ncol=1)
+
+
+
+tapply(tmp4,finance$y,function(xxx) round(c(mean(xxx),sd(xxx)),2))
+
+par(mfcol=c(1,2))
+
+boxplot(pred1$x~finance$y);abline(h=0,col='grey')
+
+boxplot(tmp4~finance$y);abline(h=0,col='grey')
+
+cbind(finance$y,pred1$x,tmp4,pred1$x-tmp4)
+
+```
+
+
+
+```{r}
+
+finance.pred1 <- cbind(finance,pred1$x,pred1$posterior,pred1$class)
+
+print(finance.pred1,digits=3)
+
+table(finance$y,pred1$class)
+
+```
+
+
+
+- 정오분류표(Missclassification table)
+
+```{r}
+
+finance.ctbl1 <- table(finance$y,pred1$class)
+
+# install.packages("DescTools")
+
+library(DescTools)
+
+Desc(finance.ctbl1,digits=2)
+
+```
+
+
+
+- 모공분산행렬의 동일성 검정
+
+```{r}
+
+# install.packages("biotools")
+
+library(biotools)
+
+finance.boxM <- boxM(finance[,2:5],finance$y)
+
+print(finance.boxM)
+
+print(finance.boxM$cov)
+
+print(finance.boxM$pooled)
+
+```
+
+
+
+- 이차 판별분석
+
+```{r}
+
+library(MASS)
+
+finance.qda <- qda(y~x1+x2+x3+x4,data=finance)
+
+pred2 <- predict(finance.qda,finance)
+
+finance.ctbl2 <- table(finance$y,pred2$class)
+
+library(DescTools)
+
+Desc(finance.ctbl2,digits=2)
+
+```
+
+
+
+
+
+

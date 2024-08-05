@@ -1,0 +1,202 @@
+---
+title: "main factor analysis 1"
+author: "2020111538 Oh SukJu"
+date: 
+output:
+ latex_engine: xelatex
+  pdf_document:
+    keep_tex: false
+    toc: true            # 목차 추가
+    toc_depth: 3         # 목차의 깊이 지정
+    number_sections: true  # 섹션 번호 지정
+    fig_caption: true    # 그림 캡션 추가
+    fig_width: 6         # 그림 너비
+    fig_height: 4        # 그림 높이
+    includes:
+      in_header:
+  output: 
+---
+
+```{r fig.width=3,fig.height=3}
+
+n=1000
+
+set.seed(23)
+
+# x=rnorm(n)*5+10
+
+x=rt(n,df=10)
+
+
+
+# qqplot(x,qnorm(ppoints(n),mean=0,sd=5),pch=19)
+
+# qqline(x,distribution=function(p) qnorm(p,sd=5,mean=0),col='yellow',lwd=3)
+
+qqplot(x,qt(ppoints(n),df=10),pch=19)
+
+qqline(x,distribution=function(p) qt(p,df=10),col='yellow',lwd=3)
+
+```
+
+```{r, echo=T, eval=T}
+
+library(MASS)
+
+D=diag(c(1,2,.4))
+
+sqrt(D)
+
+```
+
+```{r}
+
+rr=matrix(c(  1,  0.6,  0.1,
+
+            0.6,    1,  0.2,
+
+            0.1,  0.2,    1),nrow=3,byrow=T)
+
+Sigma=D^{1/2}%*%rr%*%D^{1/2}
+
+rr;Sigma
+
+# ss;rr;Sigma
+
+```
+
+```{r}
+
+nn=10000
+
+mu=rep(0,3)
+
+set.seed(320)
+
+d1=mvrnorm(nn,mu,Sigma)
+
+class(d1)
+
+dim(d1)
+
+head(d1)
+
+# x=d1[,1]
+
+qqahn=function(xx){
+
+  mm=mean(xx)
+
+  sig=sd(xx)
+
+  qqplot(xx,qnorm(ppoints(n),mean=mm,sd=sig),pch=19)
+
+  qqline(xx,distribution=function(p) qnorm(p,sd=sig,mean=mm),col='yellow',lwd=3)
+
+}
+
+
+
+par(mfrow=c(1,3))
+
+for(i in 1:3){
+
+  qqahn(d1[,i])
+
+}
+
+
+
+```
+
+```{r}
+
+class(d1)
+
+apply(d1,2,function(xx){
+
+  paste(round(mean(xx,na.rm=T),2),'±',
+
+        round(sd(xx,na.rm=T),2),sep='')
+
+})
+d2 = scale(d1)
+```
+
+```{r}
+Sigma
+cov(d1)
+rr
+cov(d1)
+cov(d2)
+```
+
+```{r}
+eeR = eigen(cov(d2))
+l1=eeR$values
+
+l1/sum(l1)*100
+```
+
+```{r}
+d1 <- data.frame(d1)
+d2 <- data.frame(d2)
+names(d2) = c('X1', 'X2', 'X3')
+head(d1)
+```
+
+```{r}
+U <- eeR$vectors
+L <- diag(eeR$values)
+U%*%L%*%t(U)
+```
+
+```{r}
+U <- eeR$vectors
+L <- diag(eeR$values)
+U%*%L%*%t(U)
+U%*%t(U)
+round(U%*%t(U), 2)
+```
+
+```{r}
+Y <- as.matrix(d2)
+head(Y)
+```
+
+```{r}
+Y11 <- matrix(Y[1,],ncol = 1)
+p11b = t(U[ , 1])%*%Y[1,]
+p11b;p11b
+```
+
+```{r}
+p1 <- Y%*%U[,1]
+p1[1:3]
+```
+
+```{r}
+par(mfrow=c(1,2))
+hist(p1)
+qqplot(qnorm(ppoints(length(p1)), sd= sqrt(L[1,1])), p1,xlab = 'Nomal Dist.',ylab = 'Emphirical Dist.')
+
+qqline(p1, distribution = function(p) qnorm(p,sd=sqrt(L[1,1])))
+```
+
+```{r}
+p1 = Y%*%U[,1]
+p2 = Y%*%U[,2]
+
+require(KernSmooth)
+```
+
+```{r}
+par(mfrow=c(1,2))
+z <- bkde2D(cbind(p1,p2),1)
+persp(z$fhat, theta = 0, phi = 45)
+```
+
+```{r fig.width=3, fig.height=3}
+plot(p1,p2, cex=.5, pch = 19, col = 'gray', ylim= c(-4,4), xlim= c(-4,4))
+abline(h=0, v=0, lty=3)
+```

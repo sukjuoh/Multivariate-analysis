@@ -1,0 +1,367 @@
+---
+title: "main factor analysis 1"
+author: "2020111538 Oh SukJu"
+date: 
+output:
+  pdf_document:
+    latex_engine: xelatex
+    keep_tex: false
+    toc: true            # 목차 추가
+    toc_depth: 3         # 목차의 깊이 지정
+    number_sections: true  # 섹션 번호 지정
+    fig_caption: true    # 그림 캡션 추가
+    fig_width: 6         # 그림 너비
+    fig_height: 4        # 그림 높이
+    includes:
+      in_header:
+  output: 
+---
+\vspace{30pt} 
+
+```{r}
+library(MASS)
+rr=matrix(c(  1,  0.6,  0.1, -0.1,
+
+            0.6,    1,  0.2, -0.2,
+
+            0.1,  0.2,    1, 0.7,
+            -0.1, -0.2, 0.7, 1.0 ),nrow=4,byrow=T)
+
+D=diag(c(1,2,.4, 2))
+
+Sigma=D^{1/2}%*%rr%*%D^{1/2}
+
+nn=10000
+mu=rep(0, dim(rr)[1])
+set.seed(2023)
+d1=scale(mvrnorm(nn,mu,Sigma))
+
+R=cov(d1)
+eeR=eigen(R)
+
+```
+
+```{r}
+
+U = eeR$vectors
+L = diag(eeR$values)
+
+# U%*%L%*%t(U)
+# R
+
+m=2
+Um = U[,1:m]
+Lm = L[1:m, 1:m]
+
+Rm = Um%*%Lm%*%t(Um)
+
+
+
+round(R-Rm,3)
+
+Umr = U[,-(1:m)]
+Lmr = L[-(1:m),-(1:m)]
+Rmr = Umr%*%Lmr%*%t(Umr)
+
+round(Rmr, 3)
+
+```
+
+```{r}
+eeR2 = eigen(R-diag(diag(Rmr)))
+eeR2
+ll=eeR2$values
+cumsum(ll)/sum(ll)
+U= eeR2$vectors[,1:2]
+L = diag(eeR2$values[1:2])
+round(U%*%L%*%t(U) + diag(diag(Rmr)),3)
+
+psi = diag(diag(Rmr))
+psi + U%*%L%*%t(U)
+D = U%*%sqrt(L)
+round(solve(t(D)%*%solve(psi)%*%D),3)
+f = solve(t(D)%*%solve(psi)%*%D)%*%t(D)%*%solve(psi)%*%d1[1,]
+f
+```
+
+```{r}
+library(MASS)
+pp=10
+set.seed(2022)
+
+Sigma = matrix(rWishart(1,pp,diag(pp)), pp)
+R = diag(1/sqrt(diag(Sigma)))%*%Sigma%*%diag(1/sqrt(diag(Sigma)))
+R;Sigma;det(Sigma)
+```
+
+```{r}
+nn=10000
+mu=rep(0,pp)
+set.seed(2022)
+d1 = mvrnorm(nn,mu,Sigma)
+d1 = data.frame(d1)
+
+names(d1) = paste('X', 1:pp, sep='')
+
+Sigma
+cov(d1)
+```
+
+```{r}
+eeS = eigen(cor(d1))
+eeS
+
+cumsum(eeS$values/sum(eeS$values)*100)
+
+d1.pca <- princomp(d1, cor=T)
+summary(d1.pca)
+```
+
+```{r}
+mm=4
+d1.fa=factanal(d1,mm)
+loadings(d1.fa)
+
+round(cor(d1), 2)
+D1 = d1.fa$loadings[1:pp,1:mm]
+P1 = diag(d1.fa$uniquenesses)
+round(D1%*%t(D1)+P1, 2)
+
+
+```
+
+```{r}
+
+d1.fa = factanal(d1,mm)
+loadings(d1.fa)
+```
+
+```{r}
+psi = diag(diag(Rmr))
+psi
+D = U%*%sqrt(L)
+D
+round(solve(t(D)%*%solve(psi)%*%D),3)
+f1 = solve(t(D)%*%solve(psi)%*%D)%*%t(D)%*%solve(psi)%*%D1[1,]
+f1
+f=D1%*%solve(psi)%*%D%*%solve(t(D)%*%solve(psi)%*%D)
+f
+
+```
+
+```{r}
+library(MASS)
+rr=matrix(c(  1,  0.6,  0.1, -0.1,
+
+            0.6,    1,  0.2, -0.2,
+
+            0.1,  0.2,    1, 0.7,
+            -0.1, -0.2, 0.7, 1.0 ),nrow=4,byrow=T)
+
+D=diag(c(1,2,.4, 2))
+
+Sigma=D^{1/2}%*%rr%*%D^{1/2}
+
+nn=10000
+mu=rep(0, dim(rr)[1])
+set.seed(2023)
+d1=scale(mvrnorm(nn,mu,Sigma))
+
+head(d1)
+dim(d1)
+cov(d1)
+```
+
+KMO 표본 적합성 측도 Overall MSA가 클수록 요인분석이 필요한 것으로 판정. (0.5 이상)
+
+```{r}
+library(psych)
+R = cov(d1)
+KMO(d1)
+```
+
+```{r}
+s1=diag(sqrt(1/diag(solve(R))))
+q1=s1%*%solve(R)%*%s1
+
+sur2=sum((R-diag(diag(R)))^2)
+suq2=sum((q1-diag(diag(q1)))^2)
+sur2 / (sur2+suq2)
+```
+
+Bartlett의 구형성 검정 R : 상관행렬 $H_0 : R = I$ $H_O$채택인 경우 Y의 공분산 즉 상관행렬은 다각행렬로 볼 수 있고 이는 인자적재행렬과 특정 분산행렬을 구분할 수 없으므로 인자분석을 진행하지 않음
+
+$H_0$ 기각인 경우 요인분석 진행
+
+```{r}
+library(psych)
+cortest.bartlett(R,nn)
+
+tmp=mvrnorm(nn,mu,diag(1,length(mu)))
+cortest.bartlett(cor(tmp),nn)
+```
+
+```{r}
+library(MASS)
+pp=8
+set.seed(2022)
+
+Sigma = matrix(rWishart(1,pp,diag(pp)), pp)
+R = diag(1/sqrt(diag(Sigma)))%*%Sigma%*%diag(1/sqrt(diag(Sigma)))
+round(Sigma,2);det(Sigma);round(R,2)
+```
+
+```{r}
+nn=10000
+mu=rep(0,pp)
+set.seed(2022)
+d1 = mvrnorm(nn,mu,Sigma)
+d1=data.frame(d1)
+names(d1) = paste('X', 1:pp,sep='')
+
+mm=3
+d1.fa = factanal(scale(d1), mm)
+d1.fa
+```
+
+
+$$
+
+\begin{aligned}
+
+Y_i &= \Delta f_i + e_i \\ Cov(Y_i) &= \Delta \Delta' + \Psi \\ Y_i &= \begin{bmatrix} Y_{i1} \\ Y_{i2} \\ \vdots \\ Y_{ip} \end{bmatrix}, ~~~e_i=\begin{bmatrix}e_{i1}\\e_{i2}\\\vdots\\e_{ip}\end{bmatrix}\\ Y_{i1} &= \delta_{11} f_1 +\delta_{12} f_2 + \cdots + \delta_{1m} f_m + e_{i1}\\
+
+Var(Y_{i1})&=\delta_{11}^2+\delta_{12}^2+ \cdots+\delta_{1m}^2+ \psi_1\\\
+\psi_1&=1-(\delta_{11}^2+\delta_{12}^2+\cdots+\delta_{1m}^2) 
+
+\end{aligned}
+
+
+$$
+
+```{r}
+mm=3
+d1.fa=factanal(d1,mm)
+d1.fa$loadings
+
+round(d1.fa$loadings[1:pp,],3)
+round(d1.fa$uniquenesses,3)
+round(1-apply(d1.fa$loadings^2,1,sum),3)
+
+ssl = apply(d1.fa$loadings^2,2,sum)
+round(ssl,3)
+round(ssl/(sum(ssl)+sum(d1.fa$uniquenesses)),3)
+
+```
+
+```{r}
+#residual matrix
+round(cor(d1), 2)
+D1 = d1.fa$loadings[1:pp,1:mm]
+P1 = diag(d1.fa$uniquenesses)
+round(D1%*%t(D1)+P1, 2)
+round(cor(d1)-(D1%*%t(D1)+P1), 2)
+round(diag(t(D1)%*%D1)/sum(diag(D1%*%t(D1)+P1)),3)
+```
+
+```{r}
+D1
+biplot(x=D1, y=D1)
+```
+
+```{r}
+d1.fa1 = factanal(d1,mm, rotation='none')
+d1.fa2 = factanal(d1,mm, rotation = 'varimax')
+d1.fa3 = factanal(d1,mm, rotation = 'promax')
+d1.fa1;d1.fa2;d1.fa3
+```
+
+```{r}
+###### 질문하기
+
+cor = matrix(c(1.0000,  0.0524,  -0.611,
+        0.0524,  1.0000,  -0.114,
+        -0.611, -0.114,   1.000), nrow=3, byrow=T)
+
+cor
+
+k1 = as.matrix(d1.fa3$loadings[1,])
+k2 = as.matrix(d1.fa3$loadings[2,])
+k3 = as.matrix(d1.fa3$loadings[3,])
+k4 = as.matrix(d1.fa3$loadings[4,])
+k5 = as.matrix(d1.fa3$loadings[5,])
+k6 = as.matrix(d1.fa3$loadings[6,])
+k7 = as.matrix(d1.fa3$loadings[7,])
+k8 = as.matrix(d1.fa3$loadings[8,])
+
+v1=as.numeric(t(k1)%*%cor%*%k1)+as.numeric(d1.fa3$uniquenesses[1])
+v2=as.numeric(t(k2)%*%cor%*%k2)+as.numeric(d1.fa3$uniquenesses[2])
+v3=as.numeric(t(k3)%*%cor%*%k3)+as.numeric(d1.fa3$uniquenesses[3])
+v4=as.numeric(t(k4)%*%cor%*%k4)+as.numeric(d1.fa3$uniquenesses[4])
+v5=as.numeric(t(k5)%*%cor%*%k5)+as.numeric(d1.fa3$uniquenesses[5])
+v6=as.numeric(t(k6)%*%cor%*%k6)+as.numeric(d1.fa3$uniquenesses[6])
+v7=as.numeric(t(k7)%*%cor%*%k7)+as.numeric(d1.fa3$uniquenesses[7])
+v8=as.numeric(t(k8)%*%cor%*%k8)+as.numeric(d1.fa3$uniquenesses[8])
+
+t=apply(d1.fa3$loadings^2,2,sum)
+
+cumsum(t) / (sum(t)+sum(d1.fa3$uniquenesses))*100
+cumsum(t) / sum(v1+v2+v3+v4+v5+v6+v7+v8)
+v1+v2+v3+v4+v5+v6+v7+v8 ; sum(t)+sum(d1.fa3$uniquenesses)
+```
+
+
+
+```{r}
+#d1.fa1;d1.fa2;d1.fa3
+dd=d1.fa1
+dd=dd$loadings[1:8,]
+dd2=matrix(as.character(round(as.numeric(dd), 3)), 8)
+dd2[abs(dd)<0.6]=''
+matrix(as.character(round(as.numeric(dd2), 3)), 8)
+dd2=data.frame(paste('X',1:8,sep=''),dd2)
+names(dd2)=c('variable', 'Fact1', 'Fact2', 'fact3')
+dd2
+```
+
+```{r}
+#install.packages("GPArotation")
+library("GPArotation")
+d1.fa4=factanal(d1,mm,rotation='quartimax')
+d1.fa5=factanal(d1,mm,rotation='oblimin')
+
+d1.fa4;d1.fa5
+
+d1.fa4=factanal(d1,mm,rotation='quartimax')
+```
+
+```{r}
+apply(loadings(d1.fa1)^2,2,var)
+apply(loadings(d1.fa2)^2,2,var)
+apply(loadings(d1.fa3)^2,2,var)
+apply(loadings(d1.fa4)^2,2,var)
+apply(loadings(d1.fa5)^2,2,var)
+```
+
+```{r}
+round(apply(loadings(d1.fa1)^2,1,var),2)
+round(apply(loadings(d1.fa2)^2,1,var),2)
+round(apply(loadings(d1.fa3)^2,1,var),2)
+round(apply(loadings(d1.fa4)^2,1,var),2)
+round(apply(loadings(d1.fa5)^2,1,var),2)
+```
+
+```{r fig.width=15, fig.height=8}
+par(mfrow=c(2,3))
+D1=d1.fa1$loadings[1:pp,2:3]
+biplot(x=D1, y=D1, cex=1.5)
+D1=d1.fa2$loadings[1:pp,2:3 ]
+biplot(x=D1, y=D1, cex=1.5)
+D1=d1.fa3$loadings[1:pp,2:3]
+biplot(x=D1, y=D1, cex=1.5)
+plot(1,1,type="n", bty="n", axes=F, xlab="", ylab="")
+D1=d1.fa4$loadings[1:pp,2:3]
+biplot(x=D1, y=D1, cex=1.5)
+D1=d1.fa5$loadings[1:pp,2:3]
+biplot(x=D1, y=D1, cex=1.5)
+```
